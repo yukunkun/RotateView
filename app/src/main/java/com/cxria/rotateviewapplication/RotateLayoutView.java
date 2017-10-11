@@ -10,16 +10,16 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Path;
+import android.graphics.Rect;
 import android.graphics.RectF;
 import android.support.annotation.Nullable;
-import android.support.v4.view.GestureDetectorCompat;
 import android.support.v4.view.ViewCompat;
 import android.support.v4.widget.ScrollerCompat;
 import android.util.AttributeSet;
 import android.util.Log;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.animation.AccelerateDecelerateInterpolator;
-import android.widget.Toast;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -28,12 +28,14 @@ import java.util.List;
  * Created by yukun on 17-10-10.
  */
 
-public class RotateView extends View {
+public class RotateLayoutView extends View {
     private Context context;
     private int panNum = 6;
     private Paint dPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private Paint sPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private Paint textPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private Paint whitePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private Paint yellowPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private int InitAngle = 0;
     private int radius = 0;
     private int verPanRadius ;
@@ -41,25 +43,29 @@ public class RotateView extends View {
     private List<Integer> images =new ArrayList<>();
     private List<String> strs =new ArrayList<>() ;
 
-
     private List<Bitmap> bitmaps = new ArrayList<>();
     private ScrollerCompat scroller;
     private int screenWidth,screeHeight;
+    private int ringLength=16;
+    private Paint backgroundPaint=new Paint(Paint.ANTI_ALIAS_FLAG);
+    private Rect mRect;
+    private boolean isYellow = false;
+    private int delayTime=500;
+    private int pos;
 
-    public RotateView(Context context) {
+    public RotateLayoutView(Context context) {
         super(context);
         init(context,null,0);
     }
 
-    public RotateView(Context context, @Nullable AttributeSet attrs) {
+    public RotateLayoutView(Context context, @Nullable AttributeSet attrs) {
         super(context, attrs);
         init(context,attrs,0);
     }
 
-    public RotateView(Context context, @Nullable AttributeSet attrs, int defStyleAttr) {
+    public RotateLayoutView(Context context, @Nullable AttributeSet attrs, int defStyleAttr) {
         super(context, attrs, defStyleAttr);
         init(context,attrs,0);
-
     }
 
     private void init(Context context, AttributeSet attrs, int s) {
@@ -67,6 +73,13 @@ public class RotateView extends View {
         screeHeight = getResources().getDisplayMetrics().heightPixels;
         screenWidth = getResources().getDisplayMetrics().widthPixels;
         scroller = ScrollerCompat.create(context);
+        //外围的圆点旋转起来，其实是view的定时更新
+        post(new Runnable() {
+            @Override
+            public void run() {
+                startLuckLight();
+            }
+        });
     }
 
     private void initDate() {
@@ -85,6 +98,11 @@ public class RotateView extends View {
         dPaint.setColor(Color.rgb(255,133,132));
         //两个扇形的颜色
         sPaint.setColor(Color.rgb(254,104,105));
+        //背景
+        backgroundPaint.setColor(Color.rgb(255,92,93));
+        //圆圈画笔
+        whitePaint.setColor(Color.WHITE);
+        yellowPaint.setColor(Color.YELLOW);
         textPaint.setColor(Color.WHITE);
         textPaint.setTextSize(Util.dip2px(context,16));
         setClickable(true);
@@ -101,7 +119,7 @@ public class RotateView extends View {
 
         int MinValue = Math.min(screenWidth,screeHeight);
         //设置边距，获取到view的宽度
-        MinValue -= Util.dip2px(context,40)*2;
+        MinValue -= Util.dip2px(context,30)*2;
         setMeasuredDimension(MinValue,MinValue);
     }
 
@@ -109,10 +127,10 @@ public class RotateView extends View {
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
         //内边距
-        final int paddingLeft = getPaddingLeft();
-        final int paddingRight = getPaddingRight();
-        final int paddingTop = getPaddingTop();
-        final int paddingBottom = getPaddingBottom();
+        final int paddingLeft = getPaddingLeft()+Util.dip2px(context,ringLength);
+        final int paddingRight = getPaddingRight()-Util.dip2px(context,ringLength);
+        final int paddingTop = getPaddingTop()+Util.dip2px(context,ringLength);
+        final int paddingBottom = getPaddingBottom()-Util.dip2px(context,ringLength);
         //view的宽高
         int width = getWidth() - paddingLeft - paddingRight;
         int height = getHeight() - paddingTop - paddingBottom;
@@ -120,10 +138,13 @@ public class RotateView extends View {
         //获取到圆的半径
         radius = MinValue/2;
         //获取到view的矩形
-        RectF rectF = new RectF(getPaddingLeft(),getPaddingTop(),width,height);
+        RectF rectF = new RectF(getPaddingLeft()+Util.dip2px(context,ringLength),getPaddingTop()+Util.dip2px(context,ringLength),width-Util.dip2px(context,ringLength),height-Util.dip2px(context,ringLength));
         //角度的起始是顺时针的，%4==0,如果为4,则就是90度，数学的第三象限开始，否则在第四象限
         int angle = (panNum%4 ==0) ? InitAngle : InitAngle-diffRadius;
         Log.d("angle", String.valueOf(angle));
+        //大圆
+        canvas.drawCircle(MinValue/2,MinValue/2,radius,backgroundPaint);
+
         //绘制圆弧，两个不同颜色的圆弧
         for(int i= 0;i<panNum;i++){
             if(i%2 == 0){
@@ -145,6 +166,12 @@ public class RotateView extends View {
             drawText((panNum%4==0)?InitAngle+diffRadius + (diffRadius*3/4):InitAngle+diffRadius ,strs.get(i), 2*radius, textPaint, canvas,rectF);
             InitAngle += verPanRadius;
         }
+
+        //绘制中间的图
+        Bitmap bitmap = BitmapFactory.decodeResource(context.getResources(), R.mipmap.node);
+        mRect = new Rect(MinValue/2-bitmap.getWidth()/2,MinValue/2-bitmap.getHeight()/2,MinValue/2+bitmap.getWidth()/2,MinValue/2+bitmap.getHeight()/2);
+        canvas.drawBitmap(bitmap,null, mRect, null);
+        drawSmallCircle(canvas,isYellow,MinValue);
     }
 
     //文字绘制，path路径
@@ -168,17 +195,58 @@ public class RotateView extends View {
         float angle = (float) Math.toRadians(verPanRadius +startAngle);
 
         //确定图片在圆弧中 中心点的位置
-        float x = (float) (xx + (mRadius /2 + mRadius/12)* Math.cos(angle));
-        float y = (float) (yy + (mRadius /2 +mRadius/12) * Math.sin(angle));
+        float x = (float) (xx + (mRadius /2 + mRadius/12-Util.dip2px(context,ringLength))* Math.cos(angle));
+        float y = (float) (yy + (mRadius /2 +mRadius/12-Util.dip2px(context,ringLength)) * Math.sin(angle));
 
         // 确定绘制图片的位置，前后偏移，得到图片的位置
-        RectF rect = new RectF(x - imgWidth *2 / 3, y - imgWidth*2 / 3, x + imgWidth
-                *2/ 3, y + imgWidth*2/3);
-        //mCanvas.drawRect(rect,textPaint);
+        RectF rect = new RectF(x - imgWidth *2 / 3, y - imgWidth*2 / 3,
+                x + imgWidth *2/ 3, y + imgWidth*2/3);
+//        mCanvas.drawRect(rect,textPaint);
         Bitmap bitmap = bitmaps.get(i);
         //绘制
         mCanvas.drawBitmap(bitmap, null, rect, null);
     }
+
+    private void drawSmallCircle(Canvas canvas, boolean FirstYellow, int minValue) {
+        //位置要在内部，每次的半径相应的变短一点
+        int pointDistance = radius - Util.dip2px(context,9);
+        //每次增加20度，也就是能够得到18个点
+        for(int i=0;i<=360;i+=20){
+            //每次获取到圆心的位置，由i控制位置
+            int x = (int) (pointDistance * Math.sin(Util.change(i))) + minValue/2;
+            int y = (int) (pointDistance * Math.cos(Util.change(i))) + minValue/2;
+
+            //两个不同颜色圆
+            if(FirstYellow)
+                canvas.drawCircle(x,y,Util.dip2px(context,4),yellowPaint);
+            else
+                canvas.drawCircle(x,y,Util.dip2px(context,4),whitePaint);
+            FirstYellow = !FirstYellow;
+        }
+    }
+
+    /**
+     * 点击事件，点击中心就开始动画
+     * @param event
+     * @return
+     */
+    @Override
+    public boolean onTouchEvent(MotionEvent event) {
+        switch (event.getAction()){
+            case MotionEvent.ACTION_DOWN:
+                float x = event.getX();
+                float y = event.getY();
+                //点击了中间位置
+                if(x>mRect.left&&x<mRect.right&&y>mRect.top&&y<mRect.bottom){
+                    startAnimation(pos);
+                }
+                break;
+            case MotionEvent.ACTION_MOVE:
+                break;
+        }
+        return super.onTouchEvent(event);
+    }
+
     private static final long ONE_WHEEL_TIME = 500;
 
     //旋转的动画
@@ -226,7 +294,7 @@ public class RotateView extends View {
                 //每次绘制的初始值改变，最终会停止到之前设置的角度数值
                 InitAngle = (updateValue % 360 + 360) % 360;
                 //重绘制
-                ViewCompat.postInvalidateOnAnimation(RotateView.this);
+                ViewCompat.postInvalidateOnAnimation(RotateLayoutView.this);
             }
         });
         //动画监听，获取到具体的停留位置，这里处理随机位置，其实提前是知道的
@@ -266,6 +334,17 @@ public class RotateView extends View {
         return pos;
     }
 
+    //改变boolean 来实现转圈。而不是动画转圈
+    private void startLuckLight(){
+        postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                isYellow = !isYellow;
+                invalidate();
+                postDelayed(this,delayTime);
+            }
+        },delayTime);
+    }
     /**
      * 设置初始值，图片
      * @param icon
@@ -285,8 +364,9 @@ public class RotateView extends View {
     }
 
     //回调传值
-    public void setOnCallBackPosition(onCallBackPosition mOnCallBackPosition){
+    public void setOnCallBackPosition(int pos,onCallBackPosition mOnCallBackPosition){
         this.mOnCallBackPosition=mOnCallBackPosition;
+        this.pos=pos;
     }
     private onCallBackPosition mOnCallBackPosition;
     interface onCallBackPosition{

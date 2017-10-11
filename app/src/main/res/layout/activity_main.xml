@@ -1,29 +1,54 @@
 <?xml version="1.0" encoding="utf-8"?>
-<RelativeLayout
+<ScrollView
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@mipmap/background"
     tools:context="com.cxria.rotateviewapplication.MainActivity">
+    <LinearLayout android:layout_width="match_parent"
+                  android:orientation="vertical"
+                  android:gravity="center_horizontal"
+                  android:layout_height="wrap_content">
 
-    <RelativeLayout android:layout_width="match_parent"
-                    android:background="@mipmap/background"
-                    android:layout_height="match_parent">
-    </RelativeLayout>
-    <RelativeLayout android:layout_width="match_parent"
-                    android:layout_marginTop="10dp"
-                    android:layout_height="wrap_content">
-        <com.cxria.rotateviewapplication.RotateView
+            <RelativeLayout android:layout_width="match_parent"
+                            android:layout_height="wrap_content">
+                <com.cxria.rotateviewapplication.RotateView
+                    android:layout_width="wrap_content"
+                    android:id="@+id/rv_rotateview"
+                    android:layout_centerInParent="true"
+                    android:layout_height="wrap_content"/>
+                <ImageView android:layout_width="wrap_content"
+                           android:id="@+id/iv_start"
+                           android:src="@mipmap/node"
+                           android:layout_centerInParent="true"
+                           android:layout_height="wrap_content"/>
+            </RelativeLayout>
+        <com.cxria.rotateviewapplication.RotateLayout android:layout_width="match_parent"
+                                                      android:layout_marginTop="20dp"
+                                                      android:layout_marginBottom="10dp"
+                                                      android:background="#00000000"
+                                                      android:layout_gravity="center_horizontal"
+                                                      android:layout_height="wrap_content">
+            <com.cxria.rotateviewapplication.RotateView
+                android:layout_width="wrap_content"
+                android:id="@+id/rv_rotateview2"
+                android:layout_centerInParent="true"
+                android:layout_height="wrap_content"/>
+            <ImageView android:layout_width="wrap_content"
+                       android:id="@+id/iv_start2"
+                       android:src="@mipmap/node"
+                       android:layout_centerInParent="true"
+                       android:layout_height="wrap_content"/>
+        </com.cxria.rotateviewapplication.RotateLayout>
+
+        <com.cxria.rotateviewapplication.RotateLayoutView
+            android:layout_marginTop="10dp"
+            android:layout_marginBottom="40dp"
             android:layout_width="wrap_content"
-            android:layout_centerInParent="true"
-            android:id="@+id/rv_rotateview"
+            android:id="@+id/rv_rotatelayoutview"
             android:layout_height="wrap_content"/>
-        <ImageView android:layout_width="wrap_content"
-                   android:id="@+id/iv_start"
-                   android:layout_centerInParent="true"
-                   android:src="@mipmap/node"
-                   android:layout_height="wrap_content"/>
-    </RelativeLayout>
+    </LinearLayout>
 
-</RelativeLayout>
+</ScrollView>
